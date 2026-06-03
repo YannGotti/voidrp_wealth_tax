@@ -1,5 +1,7 @@
 package ru.voidrp.wealthtax;
 
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -12,6 +14,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class TaxScheduler {
 
@@ -52,6 +55,7 @@ public class TaxScheduler {
 
         for (OfflinePlayer op : Bukkit.getOfflinePlayers()) {
             if (!economy.hasAccount(op)) continue;
+            if (isExempt(op)) continue;
             double balance = economy.getBalance(op);
             double tax = config.calculateTax(balance);
             if (tax < 0.01) continue;
@@ -79,6 +83,10 @@ public class TaxScheduler {
         lastRunMillis = System.currentTimeMillis();
         saveLastRun();
 
+        if (config.isNationTreasuryEnabled() && !config.getBackendUrl().isBlank()) {
+            applyNationTreasuryTax();
+        }
+
         long taxed = results.stream().filter(r -> r.tax() > 0.01).count();
         double total = results.stream().mapToDouble(TaxResult::tax).sum();
         plugin.getLogger().info(String.format(
@@ -97,6 +105,39 @@ public class TaxScheduler {
         yml.set("last-run", lastRunMillis);
         try { yml.save(dataFile); }
         catch (IOException e) { plugin.getLogger().warning("Не удалось сохранить data.yml: " + e.getMessage()); }
+    }
+
+    private void applyNationTreasuryTax() {
+        try {
+            var body = String.format("{\"rate\":%.4f}", config.getNationTreasuryRate());
+            var request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(config.getBackendUrl() + "/api/v1/nation-stats/nations/treasury-tax"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Game-Auth-Secret", config.getGameAuthSecret())
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .timeout(java.time.Duration.ofSeconds(10))
+                    .build();
+            var response = java.net.http.HttpClient.newHttpClient()
+                    .send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            plugin.getLogger().info("[Налог] Казна государств: статус " + response.statusCode()
+                    + ", ставка=" + (config.getNationTreasuryRate() * 100) + "%");
+        } catch (Exception e) {
+            plugin.getLogger().warning("[Налог] Ошибка списания налога с казны: " + e.getMessage());
+        }
+    }
+
+    private boolean isExempt(OfflinePlayer op) {
+        if (op.isOnline() && op.getPlayer() != null)
+            return op.getPlayer().hasPermission("voidrp.tax.exempt");
+        try {
+            LuckPerms lp = LuckPermsProvider.get();
+            var user = lp.getUserManager().loadUser(op.getUniqueId()).get(3, TimeUnit.SECONDS);
+            if (user == null) return false;
+            return user.getCachedData().getPermissionData()
+                    .checkPermission("voidrp.tax.exempt").asBoolean();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public long getLastRunMillis() { return lastRunMillis; }

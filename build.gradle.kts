@@ -21,6 +21,7 @@ dependencies {
     compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
         isTransitive = false
     }
+    compileOnly("net.luckperms:api:5.4")
 }
 
 tasks {

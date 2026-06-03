@@ -14,6 +14,10 @@ public class TaxConfig {
     private final long intervalHours;
     private final boolean notifyOnline;
     private final boolean logToConsole;
+    private final boolean nationTreasuryEnabled;
+    private final double nationTreasuryRate;
+    private final String backendUrl;
+    private final String gameAuthSecret;
 
     public TaxConfig(FileConfiguration cfg) {
         List<?> raw = cfg.getList("tiers");
@@ -35,9 +39,13 @@ public class TaxConfig {
             tiers.add(new Tier(2_000_000, 0.10));
         }
 
-        intervalHours = cfg.getLong("interval-hours", 168);
-        notifyOnline  = cfg.getBoolean("notify-online", true);
-        logToConsole  = cfg.getBoolean("log-to-console", true);
+        intervalHours         = cfg.getLong("interval-hours", 168);
+        notifyOnline          = cfg.getBoolean("notify-online", true);
+        logToConsole          = cfg.getBoolean("log-to-console", true);
+        nationTreasuryEnabled = cfg.getBoolean("nation-treasury.enabled", false);
+        nationTreasuryRate    = cfg.getDouble("nation-treasury.rate", 0.05);
+        backendUrl            = cfg.getString("backend.url", "");
+        gameAuthSecret        = cfg.getString("backend.game-auth-secret", "");
     }
 
     /**
@@ -56,9 +64,13 @@ public class TaxConfig {
         return tax;
     }
 
-    public List<Tier> getTiers()    { return tiers; }
-    public long getIntervalHours()  { return intervalHours; }
-    public long getIntervalMs()     { return intervalHours * 3_600_000L; }
-    public boolean isNotifyOnline() { return notifyOnline; }
-    public boolean isLogToConsole() { return logToConsole; }
+    public List<Tier> getTiers()              { return tiers; }
+    public long getIntervalHours()            { return intervalHours; }
+    public long getIntervalMs()               { return intervalHours * 3_600_000L; }
+    public boolean isNotifyOnline()           { return notifyOnline; }
+    public boolean isLogToConsole()           { return logToConsole; }
+    public boolean isNationTreasuryEnabled()  { return nationTreasuryEnabled; }
+    public double getNationTreasuryRate()     { return nationTreasuryRate; }
+    public String getBackendUrl()             { return backendUrl; }
+    public String getGameAuthSecret()         { return gameAuthSecret; }
 }

@@ -4,6 +4,8 @@ main: ru.voidrp.wealthtax.WealthTaxPlugin
 api-version: "1.21"
 depend:
   - Vault
+soft-depend:
+  - LuckPerms
 
 commands:
   wealthtax:
@@ -16,3 +18,6 @@ permissions:
   voidrp.wealthtax.admin:
     description: Управление WealthTax
     default: op
+  voidrp.tax.exempt:
+    description: Освобождение от налога на богатство
+    default: false
